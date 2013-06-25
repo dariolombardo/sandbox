@@ -1,5 +1,5 @@
-CFLAGS=-Wall -Werror
-LDFLAGS=-lGeoIP
+CFLAGS+=-Wall -Werror
+LDFLAGS+=-lGeoIP
 CXX?=g++
 
 all:
