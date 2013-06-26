@@ -1,4 +1,23 @@
 
+//
+// Copyright 2013
+// Dario Lombardo <lomato@gmail.com>
+//
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+//
+
 #include <GeoIP.h>
 #include <GeoIPCity.h>
 
@@ -8,6 +27,9 @@
 #include <fstream>
 #include <set>
 #include <unistd.h>
+#include <memory>
+#include <algorithm>
+#include <csignal>
 
 using namespace std;
 
@@ -15,7 +37,17 @@ typedef pair<float,float> GeoPair;
 
 set<GeoPair> geo_set;
 
-#define GEOIPFILE "/usr/share/GeoIP/GeoIPCity.dat"
+#define GEOIPFILE "/usr/share/GeoIP/GeoIPCity.da"
+
+unsigned totlines;
+unsigned partial = 0;
+
+void print_stats(int signo)
+{
+    cout << "\r" << (partial*100/totlines) << "%";
+    cout.flush();
+    alarm(1);
+}
 
 void usage(char* argv0)
 {
@@ -23,18 +55,9 @@ void usage(char* argv0)
         " -d <geoip db> -h\n\n";
 }
 
-bool checkGeoIPFile(string name)
-{
-    cout << "Checking GeoIP DB: " << name << endl;
-    struct stat st;
-    if (stat(name.c_str(), &st) == 0)
-        return true;
-    return false;
-}
-
 int main(int argc, char* argv[])
 {
-    GeoIP* gi;
+    GeoIP* gi = NULL;
     string ip;
     map<string,unsigned> country_map;
     map<string,unsigned> city_map;
@@ -86,17 +109,31 @@ int main(int argc, char* argv[])
     }
 
     gi = GeoIP_open(geofile.data(), GEOIP_STANDARD | GEOIP_CHECK_CACHE);
-    assert(gi != NULL);
+    if (gi == NULL) {
+        cerr << "Can't open GeoIP db: " << geofile << endl;
+        return 2;
+    }
 
-    cout << "Reading data from " << infile << endl;
     ifstream ifs(infile.data());
-    assert(ifs.good());
+    if (!ifs.good()) {
+        cerr << "Can't open input file: " << infile << endl;
+        return 2;
+    }
+    cout << "Reading data from " << infile << endl;
 
-    cout << "Dumping data to " << outfile << endl;
     ofstream ofs(outfile.data());
-    assert(ofs.good());
+    if (!ofs.good()) {
+        cerr << "Can't open output file: " << outfile << endl;
+        return 2;
+    }
+    cout << "Dumping data to " << outfile << endl;
 
     cout << "Using filter: " << filter << endl;
+
+    totlines = std::count(istreambuf_iterator<char>(ifs), istreambuf_iterator<char>(), '\n');
+    ifs.clear();
+    ifs.seekg(0, ios::beg);
+    cout << "Processing " << totlines << " lines\n";
 
     // write the kml header
     ofs << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
@@ -118,7 +155,15 @@ int main(int argc, char* argv[])
 
     GeoIPRecord* record;
     GeoPair coord;
+
+    cout << "0%";
+    cout.flush();
+
+    signal(SIGALRM, print_stats);
+    alarm(1);
+
     while (!(ifs >> ip).eof()) {
+        partial++;
         record = GeoIP_record_by_addr(gi, ip.data());
 
         if (!record)
@@ -161,6 +206,8 @@ int main(int argc, char* argv[])
     ofs << "</Document>\n</kml>\n";
 
     ofs.close();
+
+    cout << "\n";
 
     return 0;
 }
