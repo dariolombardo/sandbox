@@ -167,6 +167,7 @@ int main(int argc, char* argv[])
     cout << "0%";
     cout.flush();
 
+    // Print stats every second
     signal(SIGALRM, print_stats);
     alarm(1);
 

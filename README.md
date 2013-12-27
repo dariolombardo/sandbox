@@ -1,7 +1,7 @@
-ip2kml
+ip2geo
 ======
 
-Convert a IP addresses file into a google earth KML file.
+Convert a IP addresses file into a CSV file or a google earth KML file.
 
 Compilation
 -----------
@@ -15,13 +15,14 @@ Usage
 Running without parameters, it gives you the help
 
 
-    Usage: ./ip2kml -i <infile> -o <outfile> -f <filter> -d <geoip db> -h
+    Usage: ./ip2kml -i <infile> [-o <outfile>] [-f <filter>] [-d <geoip db>] [-h] [-k]
 
 
 Where the options are:
 
   * -i: the input file (mandatory)
-  * -o: output file (optional: if not specified, input.kml is used)
+  * -o: output file (optional: if not specified, <input>.csv/.kml is used)
   * -f: a filter to apply to continent code or country name (optional)
-  * -d: the location of GeoIP database (optional)
+  * -d: the location of GeoIP database (optional, default file used otherwise)
   * -h: the help
+  * -k: output file in KML format (optional, csv otherwise)
