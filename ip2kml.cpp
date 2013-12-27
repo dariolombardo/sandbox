@@ -1,4 +1,3 @@
-
 //
 // Copyright 2013
 // Dario Lombardo <lomato@gmail.com>
@@ -30,14 +29,13 @@
 #include <memory>
 #include <algorithm>
 #include <csignal>
+#include <iomanip>
 
 using namespace std;
 
 typedef pair<float,float> GeoPair;
 
-set<GeoPair> geo_set;
-
-#define GEOIPFILE "/usr/share/GeoIP/GeoIPCity.da"
+#define GEOIPFILE "/usr/share/GeoIP/GeoIPCity.dat"
 
 unsigned totlines;
 unsigned partial = 0;
@@ -51,8 +49,8 @@ void print_stats(int signo)
 
 void usage(char* argv0)
 {
-    cout << "\nUsage: " << argv0 << " -i <infile> -o <outfile> -f <filter>" <<
-        " -d <geoip db> -h\n\n";
+    cout << "\nUsage: " << argv0 << " -i <infile> [-o <outfile>] [-f <filter>]" <<
+        " [-d <geoip db>] [-h] [-k]\n\n";
 }
 
 int main(int argc, char* argv[])
@@ -67,6 +65,8 @@ int main(int argc, char* argv[])
     string filter = "";
     string geofile = GEOIPFILE;
     int c;
+    bool kml = false;
+    set<GeoPair> geo_set;
 
     opterr = 0;
 
@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    while ((c = getopt (argc, argv, "i:o:f:d:h")) != -1) {
+    while ((c = getopt (argc, argv, "i:o:f:d:hk")) != -1) {
         switch (c) {
             case 'i':
                 infile = optarg;
@@ -91,8 +91,11 @@ int main(int argc, char* argv[])
                 break;
             case 'h':
                 usage(argv[0]);
-                break;
                 return 1;
+                break;
+            case 'k':
+                kml = true;
+                break;
             default:
                 cerr << "Error: -" << c << " is not an option.\n\n";
         }
@@ -104,7 +107,7 @@ int main(int argc, char* argv[])
     }
 
     if (outfile == "") {
-        outfile = infile + ".kml";
+        outfile = infile + (kml == true ? ".kml" : ".csv");
         cout << "Outfile has not been specified. Using " << outfile << endl;
     }
 
@@ -126,6 +129,7 @@ int main(int argc, char* argv[])
         cerr << "Can't open output file: " << outfile << endl;
         return 2;
     }
+    ofs << setiosflags(ios::fixed) << setprecision(20);
     cout << "Dumping data to " << outfile << endl;
 
     cout << "Using filter: " << filter << endl;
@@ -135,23 +139,27 @@ int main(int argc, char* argv[])
     ifs.seekg(0, ios::beg);
     cout << "Processing " << totlines << " lines\n";
 
-    // write the kml header
-    ofs << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-    ofs << "<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n";
-    ofs << "<Document>\n";
-    ofs << "<open>0</open>\n";
-    ofs << "<name>IP addresses list (" << filter << ")</name>\n";
-    ofs << "<description>Locations of IP addresses list based on GeoIP database</description>\n";
-    ofs << "<Style id=\"my_small_circle\">\n";
-    ofs << "<IconStyle>\n";
-    ofs << "<scale>0.5</scale>\n";
-    ofs << "<Icon>\n";
-    ofs << "<href>http://maps.google.com/mapfiles/kml/paddle/ylw-stars.png</href>\n";
-    ofs << "</Icon>\n";
-    ofs << "</IconStyle>\n";
-    ofs << "<ListStyle>\n";
-    ofs << "</ListStyle>\n";
-    ofs << "</Style>\n";
+    // write the header
+    if (kml) {
+        ofs << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+        ofs << "<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n";
+        ofs << "<Document>\n";
+        ofs << "<open>0</open>\n";
+        ofs << "<name>IP addresses list (" << filter << ")</name>\n";
+        ofs << "<description>Locations of IP addresses list based on GeoIP database</description>\n";
+        ofs << "<Style id=\"my_small_circle\">\n";
+        ofs << "<IconStyle>\n";
+        ofs << "<scale>0.5</scale>\n";
+        ofs << "<Icon>\n";
+        ofs << "<href>http://maps.google.com/mapfiles/kml/paddle/ylw-stars.png</href>\n";
+        ofs << "</Icon>\n";
+        ofs << "</IconStyle>\n";
+        ofs << "<ListStyle>\n";
+        ofs << "</ListStyle>\n";
+        ofs << "</Style>\n";
+    } else {
+        ofs << "IP,Latitude,Longitude\n";
+    }
 
     GeoIPRecord* record;
     GeoPair coord;
@@ -185,14 +193,18 @@ int main(int argc, char* argv[])
 
         geo_set.insert(coord);
 
-        ofs << "<Placemark>";
-        ofs << "<name>" << ip << "</name>";
-        ofs << "<styleUrl>#my_small_circle</styleUrl>\n";
-        ofs << "<Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png";
-        ofs << "</href></Icon>";
-        ofs << "<Point><coordinates>" << record->longitude << ",";
-        ofs << record->latitude << ",0</coordinates>";
-        ofs << "</Point></Placemark>\n";
+        if (kml) {
+            ofs << "<Placemark>";
+            ofs << "<name>" << ip << "</name>";
+            ofs << "<styleUrl>#my_small_circle</styleUrl>\n";
+            ofs << "<Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png";
+            ofs << "</href></Icon>";
+            ofs << "<Point><coordinates>" << record->longitude << ",";
+            ofs << record->latitude << ",0</coordinates>";
+            ofs << "</Point></Placemark>\n";
+        } else {
+            ofs << ip << "," << record->latitude << "," << record->longitude << "\n";
+        }
     }
 
     if (geo_set.size() == 0) {
@@ -203,7 +215,11 @@ int main(int argc, char* argv[])
     GeoIP_delete(gi);
 
     // write the footer
-    ofs << "</Document>\n</kml>\n";
+    if (kml) {
+        ofs << "</Document>\n</kml>\n";
+    } else {
+        // do nothing
+    }
 
     ofs.close();
 
