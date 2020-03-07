@@ -12,5 +12,7 @@
 *.la
 *.a
 
+build
+
 # Output file
 ip2geo
