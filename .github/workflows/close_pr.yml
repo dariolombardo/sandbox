@@ -1,4 +1,4 @@
-name: Close Pull Request
+name: Close Pull Requests
 
 on:
   pull_request:
@@ -11,6 +11,12 @@ jobs:
     - uses: superbrothers/close-pull-request@v2
       with:
         # Optional. Post a issue comment just before closing a pull request.
-        comment: "We do not accept PRs. If you have any questions, please feel free to contact us."
+        comment: |
+          Hi, thank you for your contribution!
+          Github is however not the right place for these, please have a look at
+
+          https://www.wireshark.org/docs/wsdg_html_chunked/ChSrcContribute.html
+
+          for further instructions.
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
