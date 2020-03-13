@@ -11,7 +11,7 @@ jobs:
       - name: test
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_CLOSE_PR }}
-        run: echo "TOK: $GITHUB_TOKEN"
+        run: echo TOK=$GITHUB_TOKEN
       - uses: superbrothers/close-pull-request@v2
         with:
           # Optional. Post a issue comment just before closing a pull request.
