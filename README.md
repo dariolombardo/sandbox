@@ -26,3 +26,5 @@ Where the options are:
   * -d: the location of GeoIP database (optional, default file used otherwise)
   * -h: the help
   * -k: output file in KML format (optional, csv otherwise)
+
+test
