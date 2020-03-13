@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: test
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CLOSE_PR_TOKEN }}
         run: echo TOK=$GITHUB_TOKEN
       - uses: superbrothers/close-pull-request@v2
         with:
@@ -23,4 +23,4 @@ jobs:
 
             for further instructions.
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CLOSE_PR_TOKEN }}
